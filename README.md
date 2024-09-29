@@ -15,4 +15,4 @@ This repository presents a minimal, functional demonstration of the application'
 
 * The demonstration application will be developed in the Rust programming language, ensuring high performance and security.
 
-* Examples will initially be tested in a closed signet environment, with potential for migration to other chains as advised.
+* Examples will initially be tested in a closed testnet environment, with potential for migration to other chains if advised.
