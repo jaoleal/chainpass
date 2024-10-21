@@ -4,7 +4,15 @@ version = "0.1.0"
 edition = "2021"
 
 [lib]
-crate-type = ["cdylib"]
+name = "chainpass"
+path = "src/lib.rs"
+
+[[bin]]
+name = "chainpass"
+path = "src/main.rs"
+
 
 [dependencies]
+anyhow = "1.0.90"
 bdk = "0.29.0"
+bitcoin = "0.32.3"
