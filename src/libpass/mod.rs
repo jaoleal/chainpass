@@ -56,3 +56,8 @@ pub mod transaction_builder {
         utxo_to_spend: OutPoint,
     }
 }
+/// Utils like contanst and other stuff.
+pub mod utils {
+    /// Actually this is the tip while the development of this app... i think its impossible to have chainpass objects before its own creation.
+    pub const HEIGHT_GATE: u32 = 866_800;
+}
