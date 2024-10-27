@@ -1,4 +1,3 @@
-
 use aes::cipher::KeyInit;
 use aes_gcm::{aead::Aead, Aes256Gcm};
 use aes_gcm_siv::{aead::AeadMut, Nonce};
@@ -11,6 +10,13 @@ use anyhow::Result;
 pub struct KVObject(pub [u8; 80]);
 
 impl KVObject {
+    pub fn key(&self) -> String {
+        String::from_utf8(self.0[..8].to_vec()).unwrap()
+    }
+    pub fn pass(&self) -> String {
+        String::from_utf8(self.0[..72].to_vec()).unwrap()
+    }
+
     pub fn decrypt(key: &[u8; 32], blob: &[u8]) -> Result<KVObject> {
         let cipher = Aes256Gcm::new_from_slice(key).unwrap();
         let hash160_key = ripemd160::Hash::hash(key);

@@ -1,9 +1,6 @@
 use std::str::FromStr;
 
-use bitcoin::{
-    bip32::Xpriv,
-    key::Secp256k1, PublicKey,
-};
+use bitcoin::{bip32::Xpriv, key::Secp256k1, PublicKey};
 use libpass::object::KVObject;
 
 pub mod libpass;
@@ -48,8 +45,12 @@ pub fn main() {
     let mut secret_bytes: [u8; 32] = [0u8; 32];
     secret_bytes.copy_from_slice(sk.to_bytes().as_slice());
 
-    match obj.encrypt_data(&secret_bytes) {
-        Ok(t) => print!("{:?}", t),
-        Err(e) => println!("error {:?}", e),
-    }
+    let encrypted = obj.encrypt_data(&secret_bytes).unwrap();
+
+    assert_eq!(
+        buffer,
+        KVObject::decrypt(&secret_bytes, encrypted.as_slice())
+            .unwrap()
+            .0
+    )
 }
