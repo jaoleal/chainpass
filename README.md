@@ -1,24 +1,19 @@
-# Chainpass, How much we can rely on Crypto(graphy)?
+# The official repository of the Chainpass PoC
 
-## Abstract
+Chainpass exposes the possibility of storing passwords on publick blockchains like the Bitcoin one.
 
-Bitcoin serves as an ideological example of the power of cryptography. The blockchain hosts countless secrets locked behind cryptographic mechanisms like the [Secure Hash Algorithm](https://en.wikipedia.org/wiki/Secure_Hash_Algorithms), ensuring that they remain securely stored for an indefinite period. The inherent redundancy and immutability of the blockchain make it an ideal medium for publicly storing secrets while keeping them inaccessible to anyone but their rightful owner.
+## HOW
 
-In today's world, passwords are as valuable as currency. They safeguard our digital lives, files, and personal data. It’s only fitting to secure them as we do money—by leveraging the power of blockchain.
+From a extended keypair, just like normal wallets that controls satoshis, we can derive keys just like specified on [Bip32](https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki).
 
-Chainpass is a wallet application designed to store passwords on the blockchain using advanced cryptography. By utilizing heavy encryption and robust generation systems, it ensures that passwords remain secure, accessible only by their owner.
+Given an index, from the extended keypair, we can derive a private key and a publick key and use their data to indexate and secure a cryptographic blob containining any piece of data inside the blockchain.
 
-Note:
-This repository presents a minimal, functional demonstration of the application's potential. It is licensed under the MIT license, and contributions or forks of this idea are welcome.
+Details apart, a login-password String converted to bytes are used on the [AES](https://en.wikipedia.org/wiki/Advanced_Encryption_Standard) encryption function, using the private key as secret for the output and a ripemd160 of the private key as nounce.
 
-### Practical Implementation
+The according publick key is then used to derive a bitcoin address which needed to be funded which a suficcient amount to pay for the vbytes that the transaction have.
 
-* The demonstration application will be developed in the Rust programming language, ensuring high performance and security.
+Then, the transaction is constructed spending the address and only outputting an `op_return` with the encrypted data. We can track where the cryptographic blob is by the transaction that spend the address we funded earlier.
 
-* Examples will initially be tested in a closed testnet environment, with potential for migration to other chains if advised.
+## The output of chainpass
 
-### Implementation State and timeline.
-    [ ] - Up-and-running testnet.
-    [ ] - Transaction signing and broadcasting with data commitment.
-    [ ] - indexing by txid.
-    [ ] - Rebuilding data from chain.
+Chainpass still limited on its functions, but its core its already working.

@@ -100,7 +100,7 @@ pub fn main() {
     // Create a buffer for the KVObject
     let mut buffer = [0u8; 80];
     let login = login.unwrap_or_else(|| {
-        panic!("Login should be generated or provided");
+        panic!("Login should be generated or provided, for now use \" chainpass -g true \"");
     });
     let password = password.unwrap_or_else(|| {
         panic!("Password should be generated or provided");
