@@ -1,14 +1,7 @@
 use bitcoin::{
-    absolute::LockTime,
-    bip32::Xpriv,
-    consensus::Encodable,
-    hashes::Hash,
-    hex::DisplayHex,
-    key::{FromSliceError, Secp256k1},
-    script::PushBytes,
-    transaction::Version,
-    Address, Amount, CompressedPublicKey, Network, OutPoint, PrivateKey, PublicKey, ScriptBuf,
-    Sequence, Transaction, TxIn, TxOut, Txid, Witness,
+    absolute::LockTime, bip32::Xpriv, consensus::Encodable, hashes::Hash, hex::DisplayHex,
+    key::Secp256k1, transaction::Version, Address, Amount, CompressedPublicKey, Network, OutPoint,
+    PrivateKey, PublicKey, ScriptBuf, Sequence, Transaction, TxIn, TxOut, Txid, Witness,
 };
 use clap::{command, Parser};
 use libpass::{
@@ -21,14 +14,14 @@ use std::str::FromStr;
 pub mod libpass;
 
 pub const PASSES: [&str; 5] = [
-    "Apple river thunder blue kite clock window laughter mountain book flame star",
-    "Giraffe chocolate tree ocean dance mirror pencil bridge sunshine music heart",
-    "Tiger flower suitcase cloud rainbow pencil mountain breeze candle door chair",
-    "Cactus keyboard ice cream drum bookworm puzzle lantern butterfly rainbow stone",
-    "Laptop ocean bubble chair coffee starfish bicycle moonlight guitar feather grass",
+    "DLjTLmoWYbshrrTcNuugdadVATZCYZhoNBkxZWzaMbjxZjcvqLKCjjoRbQzdnWkzBTkNCCHk",
+    "giraffechocolatetreeoceandancemirrorpencilbridgesunshinemusicheartheartl",
+    "tigerflowersuitcasecloudrainbowpencilmountainbreezecandledoorchairchairl",
+    "cactuskeyboardicecreamdrumbookwormpuzzlelanternbutterflystonestonechairl",
+    "laptopoceanbubblechaircoffeestarfishbicyclemoonlightguitarfeathergrassrl",
 ];
 
-pub const LOGINS: [&str; 5] = ["Bright", "Calmly", "Elegant", "Joyful", "Noble"];
+pub const LOGINS: [&str; 5] = ["bright", "calmly", "elegant", "joyful", "noble"];
 
 pub const TEST_KEYL: &str  = "xprv9s21ZrQH143K2JF8RafpqtKiTbsbaxEeUaMnNHsm5o6wCW3z8ySyH4UxFVSfZ8n7ESu7fgir8imbZKLYVBxFPND1pniTZ81vKfd45EHKX73";
 
@@ -55,59 +48,107 @@ pub struct Cli {
 pub fn main() {
     let cli = Cli::parse();
 
-    let mut sk: Option<PrivateKey>;
-    let mut pk: Option<PublicKey>;
+    let mut sk: Option<PrivateKey> = None;
+    let mut pk: Option<PublicKey> = None;
 
-    let mut login: Option<[u8; 8]>;
-    let mut password: Option<[u8; 72]>;
-
-    //Load key handler
-    match cli.load_key {
-        Some(s) => {
-            let bytes = s.as_bytes();
-            match PublicKey::from_slice(bytes) {
-                Ok(k) => {
-                    pk = Some(k);
-                }
-                Err(_) => {
-                    sk = Some(
-                        match bitcoin::PrivateKey::from_slice(bytes, bitcoin::Network::Bitcoin) {
-                            Ok(s) => s,
-                            Err(_) => bitcoin::PrivateKey::from_slice(
-                                TEST_KEYL.as_bytes(),
-                                bitcoin::Network::Bitcoin,
-                            )
-                            .unwrap(),
-                        },
-                    )
-                }
-            }
-        }
-        None => (),
-    }
-
-    match cli.gen_object {
-        Some(true) => {
-            println!("Generating a login-password");
-            let mut rng = rand::thread_rng();
-            let n = rng.gen_range(0..100);
-            let l = LOGINS[n % 5];
-            println!("generated login is: {}", l);
-            let p = PASSES[n % 5];
-            println!("generated pass is: {}", p);
-
-            login = Some(l.as_bytes().try_into().unwrap());
-
-            password = Some(p.as_bytes().try_into().unwrap());
-        }
-        Some(false) => {
-            println!(
-                " Sorry, chainpass still in beta phase and only can do pre-configured objects"
+    // Load key handler
+    if let Some(s) = cli.load_key {
+        let bytes = s.as_bytes();
+        if let Ok(k) = PublicKey::from_slice(bytes) {
+            pk = Some(k);
+        } else {
+            sk = Some(
+                PrivateKey::from_slice(bytes, bitcoin::Network::Bitcoin).unwrap_or_else(|_| {
+                    bitcoin::PrivateKey::from_slice(TEST_KEYL.as_bytes(), bitcoin::Network::Bitcoin)
+                        .unwrap()
+                }),
             );
-            println!("Please do: chainpass gen-object true");
         }
-        None => {}
     }
+
+    // Generate a login-password if requested
+    let (login, password) = if cli.gen_object.unwrap_or(false) {
+        println!("Generating a login-password");
+        let mut rng = rand::thread_rng();
+        let n = rng.gen_range(0..5);
+        let l = format!("{}{}", LOGINS[n % 5], rng.gen_range(10..99));
+        println!("Generated login is: {}", l);
+        let p = PASSES[n % 5];
+        println!("Generated password is: {}", p);
+        (Some(l), Some(p))
+    } else {
+        (None, None)
+    };
+
+    if sk.is_none() && pk.is_none() {
+        println!("No valid key provided. Using test one");
+        sk = Some(
+            PrivateKey::from_str(
+                Xpriv::from_str(TEST_KEYL)
+                    .unwrap()
+                    .to_priv()
+                    .to_string()
+                    .as_str(),
+            )
+            .unwrap(),
+        );
+    }
+
+    let sk = sk.unwrap();
+    let pk = PublicKey::from_private_key(&Secp256k1::new(), &sk);
+
+    // Create a buffer for the KVObject
+    let mut buffer = [0u8; 80];
+    let login = login.unwrap_or_else(|| {
+        panic!("Login should be generated or provided");
+    });
+    let password = password.unwrap_or_else(|| {
+        panic!("Password should be generated or provided");
+    });
+
+    buffer.copy_from_slice([login.as_bytes(), password.as_bytes()].concat().as_slice());
+    let obj = KVObject(buffer);
+
+    let mut secret_bytes: [u8; 32] = [0u8; 32];
+    secret_bytes.copy_from_slice(sk.to_bytes().as_slice());
+
+    // Encrypt the KVObject
+    let encrypted = obj.encrypt_data(&secret_bytes).unwrap();
+    let address = Address::p2wpkh(
+        &CompressedPublicKey::from_private_key(&Secp256k1::new(), &sk).unwrap(),
+        Network::Bitcoin,
+    );
+    println!("Fund this address: {}", address);
+
+    // Create the transaction
+    let transaction = Transaction {
+        version: Version::TWO,
+        lock_time: LockTime::ZERO,
+        input: vec![TxIn {
+            previous_output: OutPoint {
+                txid: Txid::all_zeros(),
+                vout: 0,
+            },
+            sequence: Sequence::ENABLE_RBF_NO_LOCKTIME,
+            script_sig: ScriptBuf::new(),
+            witness: Witness::default(),
+        }],
+        output: vec![TxOut {
+            value: Amount::from_sat(0), // You might want to adjust this based on your funding
+            script_pubkey: create_op_return(&encrypted),
+        }],
+    };
+
+    let mut buffer = Vec::<u8>::new();
+    transaction.consensus_encode(&mut buffer).unwrap();
+    println!("Transaction Hex: {}", buffer.to_lower_hex_string());
+
+    // Decode the object from the transaction
+    let decoded_obj = get_obj_from_tx(&transaction, secret_bytes).unwrap();
+    println!(
+        "Object from the transaction: {} - {}",
+        decoded_obj.0, decoded_obj.1
+    );
 }
 pub fn example() {
     // Create a buffer
@@ -135,7 +176,10 @@ pub fn example() {
 
     // we instantiate a user with the index.
     let user = UserContext {
-        key_pair: (Some(sk), pk),
+        key_pair: (
+            Some(bdk::bitcoin::PrivateKey::from_str(sk.to_string().as_str()).unwrap()),
+            bdk::bitcoin::PublicKey::from_str(pk.to_string().as_str()).unwrap(),
+        ),
         index: 0,
     };
 

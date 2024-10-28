@@ -1,13 +1,17 @@
-use std::io::IoSlice;
+use std::fs;
+use std::io::{self, IoSlice, Write};
+use std::str::FromStr;
 
 /// Module to hold the methods for the user to interact with libpass.
 use anyhow::Result;
+use bdk::bitcoin::{PrivateKey, PublicKey};
 use bitcoin::script::{Builder, PushBytesBuf};
 use bitcoin::{OutPoint, Script, ScriptBuf};
-use bitcoin::{PrivateKey, PublicKey};
+use serde::{Deserialize, Serialize};
 
-use super::object::*;
+use super::object::KVObject;
 
+#[derive(Serialize, Deserialize)]
 /// This struct should hold user data that we need to scan the addresses, build transactions and extracting [`KVObject`]s.
 pub struct UserContext {
     pub key_pair: (Option<PrivateKey>, PublicKey),
@@ -17,6 +21,18 @@ impl UserContext {
     //returns (KVObject, (Opt<PK>, publickey)) for the according derivation.
     pub fn pair(&self, target: KVObject) -> Result<(KVObject, (Option<PrivateKey>, PublicKey))> {
         Ok((target, (self.key_pair)))
+    }
+    pub fn save(&self, filename: &str) -> io::Result<()> {
+        let json = serde_json::to_string(self)?;
+        let mut file = fs::File::create(filename)?;
+        file.write_all(json.as_bytes())?;
+        Ok(())
+    }
+
+    pub fn load(filename: &str) -> io::Result<Self> {
+        let json = fs::read_to_string(filename)?;
+        let context: UserContext = serde_json::from_str(&json)?;
+        Ok(context)
     }
 }
 /// Creates a KVObject from a key and a value.
