@@ -1,16 +1,34 @@
-use std::str::FromStr;
-
 use bitcoin::{
-    absolute::LockTime, bip32::Xpriv, consensus::Encodable, hashes::Hash, hex::DisplayHex,
-    key::Secp256k1, script::PushBytes, transaction::Version, Address, Amount, CompressedPublicKey,
-    Network, OutPoint, PublicKey, ScriptBuf, Sequence, Transaction, TxIn, TxOut, Txid, Witness,
+    absolute::LockTime,
+    bip32::Xpriv,
+    consensus::Encodable,
+    hashes::Hash,
+    hex::DisplayHex,
+    key::{FromSliceError, Secp256k1},
+    script::PushBytes,
+    transaction::Version,
+    Address, Amount, CompressedPublicKey, Network, OutPoint, PrivateKey, PublicKey, ScriptBuf,
+    Sequence, Transaction, TxIn, TxOut, Txid, Witness,
 };
+use clap::{command, Parser};
 use libpass::{
     object::KVObject,
     user::{create_op_return, get_obj_from_tx, UserContext},
 };
+use rand::Rng;
+use std::str::FromStr;
 
 pub mod libpass;
+
+pub const PASSES: [&str; 5] = [
+    "Apple river thunder blue kite clock window laughter mountain book flame star",
+    "Giraffe chocolate tree ocean dance mirror pencil bridge sunshine music heart",
+    "Tiger flower suitcase cloud rainbow pencil mountain breeze candle door chair",
+    "Cactus keyboard ice cream drum bookworm puzzle lantern butterfly rainbow stone",
+    "Laptop ocean bubble chair coffee starfish bicycle moonlight guitar feather grass",
+];
+
+pub const LOGINS: [&str; 5] = ["Bright", "Calmly", "Elegant", "Joyful", "Noble"];
 
 pub const TEST_KEYL: &str  = "xprv9s21ZrQH143K2JF8RafpqtKiTbsbaxEeUaMnNHsm5o6wCW3z8ySyH4UxFVSfZ8n7ESu7fgir8imbZKLYVBxFPND1pniTZ81vKfd45EHKX73";
 
@@ -25,7 +43,73 @@ pub const TEST_KEYL: &str  = "xprv9s21ZrQH143K2JF8RafpqtKiTbsbaxEeUaMnNHsm5o6wCW
 // Then we request the user to fund the address we generated and produce a transaction that consumes the address and includes the processed object on
 // a op_return.
 
+#[derive(Parser)]
+#[command(version, about, long_about = None)]
+pub struct Cli {
+    #[arg(short, long, value_name = "KEY")]
+    load_key: Option<String>,
+    #[arg(short, long, value_name = "BOOL")]
+    gen_object: Option<bool>,
+}
+
 pub fn main() {
+    let cli = Cli::parse();
+
+    let mut sk: Option<PrivateKey>;
+    let mut pk: Option<PublicKey>;
+
+    let mut login: Option<[u8; 8]>;
+    let mut password: Option<[u8; 72]>;
+
+    //Load key handler
+    match cli.load_key {
+        Some(s) => {
+            let bytes = s.as_bytes();
+            match PublicKey::from_slice(bytes) {
+                Ok(k) => {
+                    pk = Some(k);
+                }
+                Err(_) => {
+                    sk = Some(
+                        match bitcoin::PrivateKey::from_slice(bytes, bitcoin::Network::Bitcoin) {
+                            Ok(s) => s,
+                            Err(_) => bitcoin::PrivateKey::from_slice(
+                                TEST_KEYL.as_bytes(),
+                                bitcoin::Network::Bitcoin,
+                            )
+                            .unwrap(),
+                        },
+                    )
+                }
+            }
+        }
+        None => (),
+    }
+
+    match cli.gen_object {
+        Some(true) => {
+            println!("Generating a login-password");
+            let mut rng = rand::thread_rng();
+            let n = rng.gen_range(0..100);
+            let l = LOGINS[n % 5];
+            println!("generated login is: {}", l);
+            let p = PASSES[n % 5];
+            println!("generated pass is: {}", p);
+
+            login = Some(l.as_bytes().try_into().unwrap());
+
+            password = Some(p.as_bytes().try_into().unwrap());
+        }
+        Some(false) => {
+            println!(
+                " Sorry, chainpass still in beta phase and only can do pre-configured objects"
+            );
+            println!("Please do: chainpass gen-object true");
+        }
+        None => {}
+    }
+}
+pub fn example() {
     // Create a buffer
     let mut buffer = [0u8; 80];
 
