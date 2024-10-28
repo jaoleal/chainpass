@@ -1,12 +1,11 @@
 use std::fs;
-use std::io::{self, IoSlice, Write};
-use std::str::FromStr;
+use std::io::{self, Write};
 
 /// Module to hold the methods for the user to interact with libpass.
 use anyhow::Result;
 use bdk::bitcoin::{PrivateKey, PublicKey};
 use bitcoin::script::{Builder, PushBytesBuf};
-use bitcoin::{OutPoint, Script, ScriptBuf};
+use bitcoin::ScriptBuf;
 use serde::{Deserialize, Serialize};
 
 use super::object::KVObject;
@@ -48,10 +47,7 @@ pub fn create_object(key: String, value: String) -> Result<KVObject> {
     buffer.copy_from_slice(blob.as_slice());
     Ok(KVObject(buffer))
 }
-/// Scans the given key and find any objects on it.
-pub fn scan_on_key(k: &PublicKey) -> Result<Vec<u32>> {
-    unimplemented!()
-}
+
 pub fn create_op_return(data: &[u8]) -> ScriptBuf {
     let mut push_bytes = PushBytesBuf::default();
     push_bytes
@@ -73,7 +69,7 @@ pub fn get_obj_from_tx(tx: &bitcoin::Transaction, sk: [u8; 32]) -> Result<(Strin
     for out in tx.output.iter() {
         if out.script_pubkey.is_op_return() {
             let object_slice = &out.script_pubkey.as_bytes()[3..];
-            let mut t: Vec<u8> = Vec::with_capacity(dbg!(object_slice.len()));
+            let mut t: Vec<u8> = Vec::with_capacity(object_slice.len());
             t.extend_from_slice(object_slice);
             buffer = t
         }

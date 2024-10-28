@@ -1,6 +1,6 @@
 use aes::cipher::KeyInit;
 use aes_gcm::{aead::Aead, Aes256Gcm};
-use aes_gcm_siv::{aead::AeadMut, Nonce};
+use aes_gcm_siv::Nonce;
 use bdk::bitcoin::hashes::{ripemd160, Hash};
 
 use anyhow::Result;
@@ -71,8 +71,6 @@ impl KVObject {
             .encrypt(nonce, data.as_slice())
             .map_err(|e| format!("Encryption failed: {}", e))?;
 
-        // Combine nonce and ciphertext for the final output
-        // Format: [12 bytes nonce][...ciphertext]
         let mut output = Vec::with_capacity(ciphertext.len());
         output.extend_from_slice(&ciphertext);
         Ok(output)
