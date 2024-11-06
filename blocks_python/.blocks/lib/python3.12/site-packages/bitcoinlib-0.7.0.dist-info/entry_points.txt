@@ -1,0 +1,3 @@
+[console_scripts]
+cli-wallet = bitcoinlib.tools.clw:main
+clw = bitcoinlib.tools.clw:main
